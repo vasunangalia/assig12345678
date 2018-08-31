@@ -35,15 +35,38 @@ passport.deserializeUser(User.deserializeUser());
 
 
 
+var server = app.listen(process.env.PORT, process.env.IP, function(){
+    console.log("server is running");
+});
 
 
 //============
 // ROUTES
 //============
 app.get("/", function(req, res){
-    res.sendfile("home");
+    res.render("home");
 });
 
+app.get("/chat", isLoggedIn , function(req, res){
+    res.sendfile("index.html",{"root":'views'});
+});
+var io = socket(server);
+io.on('connection', (socket) => {
+
+    console.log('made socket connection', socket.id);
+
+    // Handle chat event
+    socket.on('chat', function(data){
+        // console.log(data);
+        io.sockets.emit('chat', data);
+    });
+
+    // Handle typing event
+    socket.on('typing', function(data){
+        socket.broadcast.emit('typing', data);
+    });
+
+});
 //show sign up form
 app.get("/register", function(req, res){
    res.render("register"); 
@@ -63,22 +86,24 @@ app.post("/register", function(req, res){
             return res.render('register.');
         }
         passport.authenticate("local")(req, res, function(){
-           res.redirect("home.");
+           res.redirect("home");
         });
     });
 });
 
 
-// show login form
+// login
+
+//render login form
 app.get("/login", function(req, res){
-   res.render("login."); 
+   res.render("login"); 
 });
-// handling login logic
-app.post("/login", passport.authenticate("local", 
-    {
-        successRedirect: "home",
-        failureRedirect: "/login"
-    }), function(req, res){
+//login logic
+//middleware
+app.post("/login", passport.authenticate("local", {
+    successRedirect: "/chat",
+    failureRedirect: "/login"
+}) ,function(req, res){
 });
 
 // logout route
@@ -96,8 +121,7 @@ function isLoggedIn(req, res, next){
 
 
 
-var server = app.listen(process.env.PORT, process.env.IP, function(){
-    console.log("server is running");
-});
+
+
 
 
